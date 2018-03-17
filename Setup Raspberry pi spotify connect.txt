@@ -1,0 +1,80 @@
+//Reference: https://www.sigmdel.ca/michel/ha/rpi/bluetooth_01_en.html
+ 
+ 
+//Install raspian strecht lite
+
+//Insert bluetooth dongle
+
+//change password
+passwd
+
+//Enable ssh
+sudo systemctl enable ssh
+
+//Install bluez-alsa
+sudo apt install bluealsa
+
+
+//Disable SIM Access Profile
+sudo sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd$|ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=sap|' /lib/systemd/system/bluetooth.service
+
+//Add user to bluetooth group
+sudo adduser pi bluetooth
+
+//connect bluetooth
+bluetoothctl
+agent on
+scan on
+defualt-agent
+pair 78:44:05:E7:44:3C
+trust 78:44:05:E7:44:3C
+connect 78:44:05:E7:44:3C
+
+//Set bluetooth as default playback device for alsa
+Create .asoundrc file in ~ and /root/
+
+pcm.!default {
+        type plug
+        slave.pcm {
+                type bluealsa
+                device "78:44:05:E7:44:3C"
+                profile "a2dp"
+        }
+}
+
+test using aplay sound-off-S16.wav
+
+//Install librespot
+git clone https://github.com/librespot-org/librespot
+sudo apt-get install build-essential portaudio19-dev
+
+cd librespot 
+
+cargo build --release 
+//wait 6 hours
+
+test using target/release/librespot --name Awesome Spot
+
+
+//Autostart librespot
+create systemd profile
+sudo vim /etc/systemd/system/librespot.service
+
+[Unit]
+Description=librespot
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+ExecStart=/home/pi/librespot-org/librespot/target/release/librespot --name "Awesome Spot"
+
+[Install]
+WantedBy=multi-user.target
+
+//Start librespot on startup
+sudo systemctl enable librespot
+
+
